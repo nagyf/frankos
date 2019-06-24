@@ -2,11 +2,13 @@
 #![no_main]
 
 use core::panic::PanicInfo;
+use crate::vga_buffer::{set_fg_color, Color};
 
 pub mod vga_buffer;
 
 #[panic_handler]
 pub fn panic_handler(info: &PanicInfo) -> ! {
+    set_fg_color(Color::Red);
     println!("{}", info);
     loop {}
 }
@@ -14,7 +16,6 @@ pub fn panic_handler(info: &PanicInfo) -> ! {
 #[no_mangle]
 pub extern "C" fn _start() -> ! {
     println!("Hello, world!!");
-    panic!("hahaha this is the end");
     loop {}
 }
 

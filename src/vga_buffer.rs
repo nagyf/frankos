@@ -1,5 +1,5 @@
 use volatile::Volatile;
-use core::fmt;
+use core::{fmt, mem};
 use lazy_static::lazy_static;
 use spin::Mutex;
 
@@ -18,6 +18,18 @@ macro_rules! println {
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
+}
+
+pub fn set_bg_color(color: Color) {
+    let mut writer = WRITER.lock();
+    let foreground = writer.color_code.foreground();
+    writer.color_code = ColorCode::new( foreground, color );
+}
+
+pub fn set_fg_color(color: Color) {
+    let mut writer = WRITER.lock();
+    let background = writer.color_code.background();
+    writer.color_code = ColorCode::new( color, background );
 }
 
 #[allow(dead_code)]
@@ -114,7 +126,7 @@ impl fmt::Write for Writer {
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
+        color_code: ColorCode::new(Color::White, Color::Black),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     });
 }
@@ -126,6 +138,18 @@ struct ColorCode(u8);
 impl ColorCode {
     fn new(foreground: Color, background: Color) -> ColorCode {
         ColorCode((background as u8) << 4 | (foreground as u8))
+    }
+
+    pub fn foreground(&self) -> Color {
+        unsafe {
+            return mem::transmute((0x00FF as u8) & self.0);
+        }
+    }
+
+    pub fn background(&self) -> Color {
+        unsafe {
+            return mem::transmute(self.0 >> 4);
+        }
     }
 }
 

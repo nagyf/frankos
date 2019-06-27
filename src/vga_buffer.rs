@@ -1,7 +1,9 @@
-use volatile::Volatile;
 use core::{fmt, mem};
-use lazy_static::lazy_static;
+
 use spin::Mutex;
+use volatile::Volatile;
+
+use lazy_static::lazy_static;
 
 #[macro_export]
 macro_rules! print {
@@ -16,20 +18,24 @@ macro_rules! println {
 
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
+    use x86_64::instructions::interrupts;
     use core::fmt::Write;
-    WRITER.lock().write_fmt(args).unwrap();
+
+    interrupts::without_interrupts(|| {
+        WRITER.lock().write_fmt(args).unwrap();
+    });
 }
 
 pub fn set_bg_color(color: Color) {
     let mut writer = WRITER.lock();
     let foreground = writer.color_code.foreground();
-    writer.color_code = ColorCode::new( foreground, color );
+    writer.color_code = ColorCode::new(foreground, color);
 }
 
 pub fn set_fg_color(color: Color) {
     let mut writer = WRITER.lock();
     let background = writer.color_code.background();
-    writer.color_code = ColorCode::new( color, background );
+    writer.color_code = ColorCode::new(color, background);
 }
 
 #[allow(dead_code)]
@@ -69,7 +75,6 @@ impl Writer {
                 // not part of printable ASCII range
                 _ => self.write_byte(0xfe),
             }
-
         }
     }
 
